@@ -251,3 +251,26 @@ table th {
 
 .loading { text-align: center; padding: 24px; color: var(--text-light); }
 .empty-state { text-align: center; padding: 32px; color: var(--text-light); }
+
+.numeric-code-box {
+    text-align: center;
+    margin-top: 24px;
+    padding: 20px;
+    background: var(--bg);
+    border-radius: var(--radius);
+}
+
+.numeric-code-label {
+    font-size: 14px;
+    color: var(--text-light);
+    margin-bottom: 8px;
+}
+
+.numeric-code {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: 10px;
+    color: var(--primary);
+    font-family: 'Courier New', monospace;
+    user-select: all;
+}

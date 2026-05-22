@@ -42,16 +42,18 @@ type ClassSession struct {
 }
 
 type QRSession struct {
-	ID             int        `json:"id"`
-	ClassSessionID int        `json:"class_session_id"`
-	IsActive       bool       `json:"is_active"`
-	CurrentToken   string     `json:"current_token,omitempty"`
-	TokenExpiresAt *time.Time `json:"token_expires_at,omitempty"`
-	CreatedAt      time.Time  `json:"created_at"`
-	ClosedAt       *time.Time `json:"closed_at,omitempty"`
-	CourseCode     string     `json:"course_code,omitempty"`
-	CourseName     string     `json:"course_name,omitempty"`
-	SessionDate    string     `json:"session_date,omitempty"`
+	ID                   int        `json:"id"`
+	ClassSessionID       int        `json:"class_session_id"`
+	IsActive             bool       `json:"is_active"`
+	CurrentToken         string     `json:"current_token,omitempty"`
+	TokenExpiresAt       *time.Time `json:"token_expires_at,omitempty"`
+	NumericCode          string     `json:"numeric_code,omitempty"`
+	NumericCodeExpiresAt *time.Time `json:"numeric_code_expires_at,omitempty"`
+	CreatedAt            time.Time  `json:"created_at"`
+	ClosedAt             *time.Time `json:"closed_at,omitempty"`
+	CourseCode           string     `json:"course_code,omitempty"`
+	CourseName           string     `json:"course_name,omitempty"`
+	SessionDate          string     `json:"session_date,omitempty"`
 }
 
 type AttendanceRecord struct {
@@ -76,7 +78,8 @@ type LoginRequest struct {
 type AttendRequest struct {
 	QRSessionID       int    `json:"qr_session_id"`
 	ClassSessionID    int    `json:"class_session_id"`
-	Token             string `json:"token"`
+	Token             string `json:"token,omitempty"`
+	NumericCode       string `json:"numeric_code,omitempty"`
 	DeviceFingerprint string `json:"device_fingerprint"`
 }
 

@@ -18,9 +18,12 @@
     </div>
 
     <div class="container container-wide">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin: 24px 0 16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin: 24px 0 16px; gap:12px; flex-wrap:wrap;">
             <h3>My Attendance</h3>
-            <button class="btn btn-primary" onclick="openScanner()">Scan QR Code</button>
+            <div style="display:flex; gap:8px;">
+                <button class="btn btn-primary" onclick="openScanner()">Scan QR Code</button>
+                <button class="btn btn-success" onclick="openCodeEntry()">Enter Code</button>
+            </div>
         </div>
 
         <div class="card">
@@ -41,6 +44,25 @@
                 Point your camera at the QR code
             </div>
             <div id="scan-error" class="error-msg" style="display:none; margin-top:8px; text-align:center;"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="code-modal" style="display:none;">
+        <div class="modal">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <h3>Enter Attendance Code</h3>
+                <button class="btn btn-secondary btn-sm" onclick="closeCodeEntry()">Close</button>
+            </div>
+            <div class="form-group">
+                <label>QR Session ID (ask your teacher)</label>
+                <input type="number" id="qr-session-id-input" placeholder="e.g. 5">
+            </div>
+            <div class="form-group">
+                <label>6-Digit Code</label>
+                <input type="text" id="numeric-code-input" placeholder="e.g. 847291" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" style="font-size:24px; text-align:center; letter-spacing:8px; font-weight:700;">
+            </div>
+            <div id="code-error" class="error-msg" style="display:none; margin-bottom:12px;"></div>
+            <button class="btn btn-success btn-block" onclick="submitCode()">Submit Attendance</button>
         </div>
     </div>
 

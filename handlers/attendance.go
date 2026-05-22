@@ -19,13 +19,15 @@ func SubmitAttendance(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var storedToken string
+	var storedNumericCode string
 	var isActive bool
 	var tokenExpiresAt *time.Time
+	var numericCodeExpiresAt *time.Time
 	var csID int
 	err := database.DB.QueryRow(`
-		SELECT current_token, is_active, token_expires_at, class_session_id
+		SELECT current_token, numeric_code, is_active, token_expires_at, numeric_code_expires_at, class_session_id
 		FROM qr_sessions WHERE id = $1
-	`, req.QRSessionID).Scan(&storedToken, &isActive, &tokenExpiresAt, &csID)
+	`, req.QRSessionID).Scan(&storedToken, &storedNumericCode, &isActive, &tokenExpiresAt, &numericCodeExpiresAt, &csID)
 
 	if err != nil {
 		http.Error(w, `{"error":"invalid QR session"}`, http.StatusBadRequest)
@@ -37,20 +39,34 @@ func SubmitAttendance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if storedToken != req.Token {
-		http.Error(w, `{"error":"invalid QR token"}`, http.StatusBadRequest)
+	if req.Token != "" {
+		if storedToken != req.Token {
+			http.Error(w, `{"error":"invalid QR token"}`, http.StatusBadRequest)
+			return
+		}
+		if tokenExpiresAt != nil && time.Now().After(tokenExpiresAt.Add(3*time.Second)) {
+			http.Error(w, `{"error":"QR token expired"}`, http.StatusBadRequest)
+			return
+		}
+	} else if req.NumericCode != "" {
+		if storedNumericCode != req.NumericCode {
+			http.Error(w, `{"error":"invalid numeric code"}`, http.StatusBadRequest)
+			return
+		}
+		if numericCodeExpiresAt != nil && time.Now().After(numericCodeExpiresAt.Add(3*time.Second)) {
+			http.Error(w, `{"error":"numeric code expired"}`, http.StatusBadRequest)
+			return
+		}
+	} else {
+		http.Error(w, `{"error":"token or numeric code required"}`, http.StatusBadRequest)
 		return
 	}
 
-	if tokenExpiresAt != nil && time.Now().After(tokenExpiresAt.Add(3*time.Second)) {
-		http.Error(w, `{"error":"QR token expired"}`, http.StatusBadRequest)
-		return
-	}
-
-	if csID != req.ClassSessionID {
+	if csID != req.ClassSessionID && req.ClassSessionID != 0 {
 		http.Error(w, `{"error":"mismatched class session"}`, http.StatusBadRequest)
 		return
 	}
+	req.ClassSessionID = csID
 
 	var alreadyAttended bool
 	err = database.DB.QueryRow(

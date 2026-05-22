@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard - Smart Attendance</title>
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 </head>
 <body>
     <div class="navbar">
@@ -50,8 +49,13 @@
                 <button class="btn btn-secondary btn-sm" id="qr-close-btn">Close & Stop QR</button>
             </div>
             <div class="qr-container">
-                <div id="qrcode"></div>
-                <div class="qr-timer">Refreshes in <span id="qr-countdown">5</span> seconds</div>
+                <img id="qrcode-img" src="" alt="QR Code" style="max-width:280px; width:100%;">
+                <div class="qr-timer" id="qr-timer-text">QR refreshes in <span id="qr-countdown">5</span>s</div>
+            </div>
+            <div class="numeric-code-box">
+                <div class="numeric-code-label">Or enter this code:</div>
+                <div class="numeric-code" id="numeric-code-display">------</div>
+                <div class="qr-timer">Code refreshes in <span id="code-countdown">3</span>s</div>
             </div>
             <div style="margin-top:12px;">
                 <small id="qr-info" style="color:var(--text-light);"></small>

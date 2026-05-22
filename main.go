@@ -28,7 +28,7 @@ func main() {
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
-		AllowCredentials: true,
+		AllowCredentials: false,
 	}))
 
 	fileServer := http.FileServer(http.Dir("./static"))
@@ -44,6 +44,8 @@ func main() {
 	r.Post("/api/login/teacher", func(w http.ResponseWriter, r *http.Request) {
 		handlers.TeacherLogin(w, r)
 	})
+
+	r.Get("/api/teacher/qr-sessions/{id}/qr-image", handlers.GetQRImage)
 
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.StudentAuth)
