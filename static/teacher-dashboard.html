@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Dashboard - Smart Attendance</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+</head>
+<body>
+    <div class="navbar">
+        <span class="logo">Smart Attendance</span>
+        <div class="user-info">
+            <span id="teacher-name"></span>
+            <button class="btn btn-secondary btn-sm" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <div class="container container-wide">
+        <div style="margin: 24px 0 16px;">
+            <h3>Create Class Session</h3>
+        </div>
+        <div class="card">
+            <div class="form-group">
+                <label>Select Course</label>
+                <select id="course-select"></select>
+            </div>
+            <div class="form-group">
+                <label>Session Date</label>
+                <input type="date" id="session-date">
+            </div>
+            <button class="btn btn-primary" onclick="createClassSession()">Create & Start QR</button>
+            <div id="create-error" class="error-msg" style="display:none; margin-top:8px;"></div>
+        </div>
+
+        <div style="margin: 24px 0 16px;">
+            <h3>My Class Sessions</h3>
+        </div>
+        <div class="card">
+            <div id="sessions-list"></div>
+            <div class="loading" id="sessions-loading">Loading sessions...</div>
+            <div class="empty-state" id="sessions-empty" style="display:none;">No class sessions yet. Create one above.</div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="qr-modal" style="display:none;">
+        <div class="modal">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <h3>QR Code - <span id="qr-course-name"></span></h3>
+                <button class="btn btn-secondary btn-sm" id="qr-close-btn">Close & Stop QR</button>
+            </div>
+            <div class="qr-container">
+                <div id="qrcode"></div>
+                <div class="qr-timer">Refreshes in <span id="qr-countdown">5</span> seconds</div>
+            </div>
+            <div style="margin-top:12px;">
+                <small id="qr-info" style="color:var(--text-light);"></small>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="attendance-modal" style="display:none;">
+        <div class="modal">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <h3>Attendance - <span id="att-course-name"></span></h3>
+                <button class="btn btn-secondary btn-sm" onclick="closeAttendanceModal()">Close</button>
+            </div>
+            <div id="att-list"></div>
+            <div class="loading" id="att-loading" style="display:none;">Loading...</div>
+            <div class="empty-state" id="att-empty" style="display:none;">No attendance records.</div>
+        </div>
+    </div>
+
+    <div id="toast" style="display:none;"></div>
+
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/teacher.js"></script>
+</body>
+</html>
