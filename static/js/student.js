@@ -24,31 +24,38 @@ function loadAttendance() {
     document.getElementById("empty").style.display = "none";
 
     authFetch(api("/api/student/attendance"))
-        .then(function (res) { return res.json(); })
-        .then(function (records) {
-            var tableDiv = document.getElementById("attendance-table");
-            document.getElementById("loading").style.display = "none";
-
-            if (!records || records.length === 0) {
+        .then(function (res) {
+            if (res.status === 403) {
+                document.getElementById("loading").style.display = "none";
                 document.getElementById("empty").style.display = "block";
+                document.getElementById("empty").textContent = "You must be on the university network to view attendance.";
                 return;
             }
+            return res.json().then(function (records) {
+                var tableDiv = document.getElementById("attendance-table");
+                document.getElementById("loading").style.display = "none";
 
-            tableDiv.innerHTML =
-                "<table><thead><tr>" +
-                "<th>Course</th><th>Course Code</th><th>Date</th><th>Attended At</th>" +
-                "</tr></thead><tbody>" +
-                records.map(function (r) {
-                    return (
-                        "<tr>" +
-                        "<td><strong>" + escapeHtml(r.course_name) + "</strong></td>" +
-                        "<td>" + escapeHtml(r.course_code) + "</td>" +
-                        "<td>" + escapeHtml(r.session_date) + "</td>" +
-                        "<td>" + new Date(r.attended_at).toLocaleString() + "</td>" +
-                        "</tr>"
-                    );
-                }).join("") +
-                "</tbody></table>";
+                if (!records || records.length === 0) {
+                    document.getElementById("empty").style.display = "block";
+                    return;
+                }
+
+                tableDiv.innerHTML =
+                    "<table><thead><tr>" +
+                    "<th>Course</th><th>Course Code</th><th>Date</th><th>Attended At</th>" +
+                    "</tr></thead><tbody>" +
+                    records.map(function (r) {
+                        return (
+                            "<tr>" +
+                            "<td><strong>" + escapeHtml(r.course_name) + "</strong></td>" +
+                            "<td>" + escapeHtml(r.course_code) + "</td>" +
+                            "<td>" + escapeHtml(r.session_date) + "</td>" +
+                            "<td>" + new Date(r.attended_at).toLocaleString() + "</td>" +
+                            "</tr>"
+                        );
+                    }).join("") +
+                    "</tbody></table>";
+            });
         })
         .catch(function () {
             document.getElementById("loading").style.display = "none";
@@ -193,7 +200,7 @@ function doSubmitAttendance(body) {
         body: JSON.stringify(body),
     })
         .then(function (res) {
-            return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+            return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; });
         })
         .then(function (result) {
             if (result.ok) {
@@ -201,8 +208,13 @@ function doSubmitAttendance(body) {
                 loadAttendance();
                 closeCodeEntry();
             } else {
-                showToast(result.data.error || "Failed to record attendance.", "error");
-                document.getElementById("code-error").textContent = result.data.error || "Failed.";
+                if (result.status === 403) {
+                    showToast("You must be on the university network to take attendance.", "error");
+                    document.getElementById("code-error").textContent = "Access denied: not on the university network.";
+                } else {
+                    showToast(result.data.error || "Failed to record attendance.", "error");
+                    document.getElementById("code-error").textContent = result.data.error || "Failed.";
+                }
                 document.getElementById("code-error").style.display = "block";
             }
         })

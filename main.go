@@ -49,6 +49,7 @@ func main() {
 	r.Get("/api/teacher/qr-sessions/{id}/qr-image", handlers.GetQRImage)
 
 	r.Group(func(r chi.Router) {
+		r.Use(middleware.IPCheck)
 		r.Use(middleware.StudentAuth)
 
 		r.Post("/api/student/attend", handlers.SubmitAttendance)
