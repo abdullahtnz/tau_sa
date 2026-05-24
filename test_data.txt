@@ -12,5 +12,21 @@ INSERT INTO courses (course_code, course_name, department) VALUES ('PHY101', 'AP
 -- Assign teacher to course (replace teacher_id and course_id)
 INSERT INTO teacher_courses (teacher_id, course_id) VALUES (1, 1);
 
+$2a$10$cAwVkgFs1B39pn8c5JToT.NcaU7Lz1PKQAYPjzKXCxCUSt428IMRS
+
 
 NOTE: THE HASHED PASSWORD INDICATES 123456
+
+
+
+
+
+
+
+
+
+
+
+
+
+
