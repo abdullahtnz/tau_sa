@@ -42,7 +42,7 @@ function loadAttendance() {
 
                 tableDiv.innerHTML =
                     "<table><thead><tr>" +
-                    "<th>Course</th><th>Course Code</th><th>Date</th><th>Attended At</th>" +
+                    "<th>Course</th><th>Course Code</th><th>Date</th>" +
                     "</tr></thead><tbody>" +
                     records.map(function (r) {
                         return (
