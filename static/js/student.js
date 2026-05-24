@@ -50,7 +50,6 @@ function loadAttendance() {
                             "<td><strong>" + escapeHtml(r.course_name) + "</strong></td>" +
                             "<td>" + escapeHtml(r.course_code) + "</td>" +
                             "<td>" + escapeHtml(r.session_date) + "</td>" +
-                            "<td>" + new Date(r.attended_at).toLocaleString() + "</td>" +
                             "</tr>"
                         );
                     }).join("") +

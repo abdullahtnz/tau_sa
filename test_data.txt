@@ -19,7 +19,12 @@ NOTE: THE HASHED PASSWORD INDICATES 123456
 
 
 
+THINGS TO DO:
+- QR CODE GIVES INVALID REQUEST BODY
+- NEED TO REFRESH TO SEE ATTENDANCE FOR TEACHERS
+- have some allignment error on phones
 
+                            "<td>" + new Date(r.attended_at).toLocaleString() + "</td>" +
 
 
 
