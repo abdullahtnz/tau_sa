@@ -34,29 +34,43 @@ document.addEventListener("DOMContentLoaded", function () {
     loadSessions();
 });
 
+var coursesLoading = false;
+
 function loadCourses() {
+    if (coursesLoading) return;
+    coursesLoading = true;
+
+    var select = document.getElementById("course-select");
+    select.innerHTML = '<option value="">Loading courses...</option>';
+
     authFetch(api("/api/teacher/courses"))
         .then(function (res) { return res.json(); })
         .then(function (courses) {
-            var select = document.getElementById("course-select");
-            select.innerHTML = '<option value="">-- Select a course --</option>';
+            var html = '<option value="">-- Select a course --</option>';
             for (var i = 0; i < courses.length; i++) {
-                select.innerHTML +=
+                html +=
                     '<option value="' + courses[i].id + '">' +
                     escapeHtml(courses[i].course_code) + " - " +
                     escapeHtml(courses[i].course_name) + "</option>";
             }
+            select.innerHTML = html;
         })
         .catch(function () {
-            document.getElementById("course-select").innerHTML =
-                '<option value="">Failed to load courses</option>';
+            select.innerHTML = '<option value="">Failed to load courses</option>';
+        })
+        .finally(function () {
+            coursesLoading = false;
         });
 }
 
+var sessionsLoading = false;
+
 function loadSessions() {
+    if (sessionsLoading) return;
+    sessionsLoading = true;
+
     document.getElementById("sessions-loading").style.display = "block";
     document.getElementById("sessions-empty").style.display = "none";
-    document.getElementById("sessions-list").innerHTML = "";
 
     authFetch(api("/api/teacher/class-sessions"))
         .then(function (res) { return res.json(); })
@@ -64,7 +78,9 @@ function loadSessions() {
             document.getElementById("sessions-loading").style.display = "none";
 
             if (!sessions || sessions.length === 0) {
+                document.getElementById("sessions-empty").textContent = "No class sessions yet. Create one above.";
                 document.getElementById("sessions-empty").style.display = "block";
+                document.getElementById("sessions-list").innerHTML = "";
                 return;
             }
 
@@ -86,8 +102,11 @@ function loadSessions() {
         })
         .catch(function () {
             document.getElementById("sessions-loading").style.display = "none";
-            document.getElementById("sessions-empty").style.display = "block";
             document.getElementById("sessions-empty").textContent = "Failed to load sessions.";
+            document.getElementById("sessions-empty").style.display = "block";
+        })
+        .finally(function () {
+            sessionsLoading = false;
         });
 }
 
@@ -237,18 +256,23 @@ function startQRTimers(qrSessionId) {
 }
 
 function closeQR(qrSessionId) {
+    clearInterval(qrTimerInterval);
+    qrTimerInterval = null;
+    clearInterval(codeTimerInterval);
+    codeTimerInterval = null;
+    document.getElementById("qr-modal").style.display = "none";
+    currentQRSession = null;
+
     authFetch(api("/api/teacher/qr-sessions/" + qrSessionId + "/close"), {
         method: "PUT",
     })
         .then(function () {
-            clearInterval(qrTimerInterval);
-            clearInterval(codeTimerInterval);
-            document.getElementById("qr-modal").style.display = "none";
-            currentQRSession = null;
             showToast("QR session closed.", "success");
+            loadSessions();
+            loadCourses();
         })
         .catch(function () {
-            showToast("Failed to close QR session.", "error");
+            showToast("Failed to close QR session on server.", "error");
         });
 }
 
