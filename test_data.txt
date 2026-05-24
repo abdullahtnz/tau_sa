@@ -1,0 +1,16 @@
+-- Insert a student (replace values as needed)
+INSERT INTO students (student_id, password_hash, full_name, email, department)
+VALUES ('2024004', '$2a$10$4TwCQ0HC6qibhOcxXNTRieegyMBnNhone74vOQQrhKmAIyvEqbMdu', 'Abdullah Novruzlu', 'abdullah@tau.edu', 'Computer Engineering');
+
+-- Insert a teacher (replace values as needed)
+INSERT INTO teachers (teacher_id, password_hash, full_name, email, department)
+VALUES ('T002', '$2a$10$4TwCQ0HC6qibhOcxXNTRieegyMBnNhone74vOQQrhKmAIyvEqbMdu', 'Prof. Smile', 'smile@tau.edu', 'Computer Science');
+
+-- Insert a course
+INSERT INTO courses (course_code, course_name, department) VALUES ('PHY101', 'AP Physics 1', 'Physics');
+
+-- Assign teacher to course (replace teacher_id and course_id)
+INSERT INTO teacher_courses (teacher_id, course_id) VALUES (1, 1);
+
+
+NOTE: THE HASHED PASSWORD INDICATES 123456
