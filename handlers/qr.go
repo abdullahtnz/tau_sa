@@ -17,8 +17,8 @@ import (
 	qrcode "github.com/skip2/go-qrcode"
 )
 
-const tokenValiditySeconds = 5
-const numericCodeValiditySeconds = 3
+const tokenValiditySeconds = 10
+const numericCodeValiditySeconds = 7
 
 func StartQRSession(w http.ResponseWriter, r *http.Request) {
 	classSessionID := chiURLParam(r, "id")
