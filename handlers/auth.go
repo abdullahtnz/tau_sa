@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"database/sql"
+	"context"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -11,6 +11,7 @@ import (
 	"tau_smart_attendance/models"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/jackc/pgx/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -28,12 +29,12 @@ func StudentLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var student models.Student
-	err := database.DB.QueryRow(
+	err := database.DB.QueryRow(context.Background(),
 		"SELECT id, student_id, password_hash, full_name, email, department FROM students WHERE student_id = $1",
 		req.UserID,
 	).Scan(&student.ID, &student.StudentID, &student.PasswordHash, &student.FullName, &student.Email, &student.Department)
 
-	if err == sql.ErrNoRows {
+	if err == pgx.ErrNoRows {
 		http.Error(w, `{"error":"invalid credentials"}`, http.StatusUnauthorized)
 		return
 	}
@@ -69,12 +70,12 @@ func TeacherLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var teacher models.Teacher
-	err := database.DB.QueryRow(
+	err := database.DB.QueryRow(context.Background(),
 		"SELECT id, teacher_id, password_hash, full_name, email, department FROM teachers WHERE teacher_id = $1",
 		req.UserID,
 	).Scan(&teacher.ID, &teacher.TeacherID, &teacher.PasswordHash, &teacher.FullName, &teacher.Email, &teacher.Department)
 
-	if err == sql.ErrNoRows {
+	if err == pgx.ErrNoRows {
 		http.Error(w, `{"error":"invalid credentials"}`, http.StatusUnauthorized)
 		return
 	}

@@ -40,9 +40,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 var coursesLoading = false;
 
-document.getElementById("load_session").addEventListener("click", function() {
-    loadSessions();
-});
 
 function loadCourses() {
     if (coursesLoading) return;
@@ -276,7 +273,7 @@ function closeQR(qrSessionId) {
     })
         .then(function () {
             showToast("QR session closed.", "success");
-            //loadSessions();
+            loadSessions();
             loadCourses();
         })
         .catch(function () {

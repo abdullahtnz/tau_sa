@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -24,7 +25,7 @@ func SubmitAttendance(w http.ResponseWriter, r *http.Request) {
 	var tokenExpiresAt *time.Time
 	var numericCodeExpiresAt *time.Time
 	var csID int
-	err := database.DB.QueryRow(`
+	err := database.DB.QueryRow(context.Background(), `
 		SELECT current_token, numeric_code, is_active, token_expires_at, numeric_code_expires_at, class_session_id
 		FROM qr_sessions WHERE id = $1
 	`, req.QRSessionID).Scan(&storedToken, &storedNumericCode, &isActive, &tokenExpiresAt, &numericCodeExpiresAt, &csID)
@@ -69,7 +70,7 @@ func SubmitAttendance(w http.ResponseWriter, r *http.Request) {
 	req.ClassSessionID = csID
 
 	var alreadyAttended bool
-	err = database.DB.QueryRow(
+	err = database.DB.QueryRow(context.Background(),
 		"SELECT EXISTS(SELECT 1 FROM attendance_records WHERE class_session_id=$1 AND student_id=$2)",
 		req.ClassSessionID, studentID,
 	).Scan(&alreadyAttended)
@@ -83,7 +84,7 @@ func SubmitAttendance(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var deviceUsed bool
-	err = database.DB.QueryRow(
+	err = database.DB.QueryRow(context.Background(),
 		"SELECT EXISTS(SELECT 1 FROM attendance_records WHERE class_session_id=$1 AND device_fingerprint=$2)",
 		req.ClassSessionID, req.DeviceFingerprint,
 	).Scan(&deviceUsed)
@@ -96,7 +97,7 @@ func SubmitAttendance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = database.DB.Exec(`
+	_, err = database.DB.Exec(context.Background(), `
 		INSERT INTO attendance_records (class_session_id, student_id, qr_session_id, device_fingerprint)
 		VALUES ($1, $2, $3, $4)
 	`, req.ClassSessionID, studentID, req.QRSessionID, req.DeviceFingerprint)
@@ -112,7 +113,7 @@ func SubmitAttendance(w http.ResponseWriter, r *http.Request) {
 func GetStudentAttendance(w http.ResponseWriter, r *http.Request) {
 	studentID := r.Context().Value(middleware.UserIDKey).(int)
 
-	rows, err := database.DB.Query(`
+	rows, err := database.DB.Query(context.Background(), `
 		SELECT ar.id, ar.class_session_id, ar.student_id, ar.qr_session_id,
 		       ar.device_fingerprint, ar.attended_at,
 		       c.course_code, c.course_name, cs.session_date

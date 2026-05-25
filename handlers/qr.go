@@ -1,8 +1,8 @@
 package handlers
 
 import (
+	"context"
 	"crypto/rand"
-	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -14,6 +14,7 @@ import (
 	"tau_smart_attendance/models"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 	qrcode "github.com/skip2/go-qrcode"
 )
 
@@ -30,7 +31,7 @@ func StartQRSession(w http.ResponseWriter, r *http.Request) {
 	numericExpires := time.Now().Add(time.Duration(numericCodeValiditySeconds) * time.Second)
 
 	var qrSession models.QRSession
-	err := database.DB.QueryRow(`
+	err := database.DB.QueryRow(context.Background(), `
 		INSERT INTO qr_sessions (class_session_id, is_active, current_token, token_expires_at, numeric_code, numeric_code_expires_at)
 		VALUES ($1, true, $2, $3, $4, $5)
 		RETURNING id, class_session_id, is_active, current_token, token_expires_at, numeric_code, numeric_code_expires_at, created_at
@@ -51,7 +52,7 @@ func StartQRSession(w http.ResponseWriter, r *http.Request) {
 func CloseQRSession(w http.ResponseWriter, r *http.Request) {
 	qrSessionID := chiURLParam(r, "id")
 
-	result, err := database.DB.Exec(`
+	result, err := database.DB.Exec(context.Background(), `
 		UPDATE qr_sessions SET is_active = false, closed_at = NOW()
 		WHERE id = $1 AND is_active = true
 	`, qrSessionID)
@@ -60,8 +61,7 @@ func CloseQRSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
-	if rowsAffected == 0 {
+	if result.RowsAffected() == 0 {
 		http.Error(w, `{"error":"QR session not found or already closed"}`, http.StatusNotFound)
 		return
 	}
@@ -73,8 +73,8 @@ func GetQRToken(w http.ResponseWriter, r *http.Request) {
 	qrSessionID := chiURLParam(r, "id")
 
 	var qrSession models.QRSession
-	var closedAt sql.NullTime
-	err := database.DB.QueryRow(`
+	var closedAt *time.Time
+	err := database.DB.QueryRow(context.Background(), `
 		SELECT id, class_session_id, is_active, current_token, token_expires_at, numeric_code, numeric_code_expires_at, closed_at
 		FROM qr_sessions WHERE id = $1
 	`, qrSessionID).Scan(
@@ -83,7 +83,7 @@ func GetQRToken(w http.ResponseWriter, r *http.Request) {
 		&qrSession.NumericCode, &qrSession.NumericCodeExpiresAt,
 		&closedAt,
 	)
-	if err == sql.ErrNoRows {
+	if err == pgx.ErrNoRows {
 		http.Error(w, `{"error":"QR session not found"}`, http.StatusNotFound)
 		return
 	}
@@ -103,9 +103,7 @@ func GetQRToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if closedAt.Valid {
-		qrSession.ClosedAt = &closedAt.Time
-	}
+	qrSession.ClosedAt = closedAt
 
 	now := time.Now()
 	updateStmt := ""
@@ -133,7 +131,7 @@ func GetQRToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if updateStmt != "" {
-		_, err := database.DB.Exec("UPDATE qr_sessions SET "+updateStmt+" WHERE id = $"+fmt.Sprint(len(updateArgs)+1),
+		_, err := database.DB.Exec(context.Background(), "UPDATE qr_sessions SET "+updateStmt+" WHERE id = $"+fmt.Sprint(len(updateArgs)+1),
 			append(updateArgs, qrSessionID)...)
 		if err != nil {
 			http.Error(w, `{"error":"failed to refresh token"}`, http.StatusInternalServerError)
@@ -155,7 +153,7 @@ func GetQRImage(w http.ResponseWriter, r *http.Request) {
 
 	var currentToken string
 	var isActive bool
-	err := database.DB.QueryRow(
+	err := database.DB.QueryRow(context.Background(),
 		"SELECT current_token, is_active FROM qr_sessions WHERE id = $1",
 		qrSessionID,
 	).Scan(&currentToken, &isActive)

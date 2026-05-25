@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 
 	"tau_smart_attendance/database"
@@ -11,7 +12,7 @@ import (
 func GetTeacherCourses(w http.ResponseWriter, r *http.Request) {
 	teacherID := r.Context().Value(middleware.UserIDKey).(int)
 
-	rows, err := database.DB.Query(`
+	rows, err := database.DB.Query(context.Background(), `
 		SELECT c.id, c.course_code, c.course_name, COALESCE(c.department, '')
 		FROM courses c
 		INNER JOIN teacher_courses tc ON c.id = tc.course_id
@@ -39,7 +40,7 @@ func GetTeacherCourses(w http.ResponseWriter, r *http.Request) {
 func GetTeacherClassSessions(w http.ResponseWriter, r *http.Request) {
 	teacherID := r.Context().Value(middleware.UserIDKey).(int)
 
-	rows, err := database.DB.Query(`
+	rows, err := database.DB.Query(context.Background(), `
 		SELECT cs.id, cs.course_id, cs.teacher_id, cs.session_date, cs.created_at, cs.updated_at,
 		       c.course_code, c.course_name
 		FROM class_sessions cs
@@ -75,7 +76,7 @@ func CreateClassSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var exists bool
-	err := database.DB.QueryRow(
+	err := database.DB.QueryRow(context.Background(),
 		"SELECT EXISTS(SELECT 1 FROM class_sessions WHERE course_id=$1 AND teacher_id=$2 AND session_date=$3)",
 		req.CourseID, teacherID, req.SessionDate,
 	).Scan(&exists)
@@ -89,7 +90,7 @@ func CreateClassSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var session models.ClassSession
-	err = database.DB.QueryRow(`
+	err = database.DB.QueryRow(context.Background(), `
 		INSERT INTO class_sessions (course_id, teacher_id, session_date)
 		VALUES ($1, $2, $3)
 		RETURNING id, course_id, teacher_id, session_date, created_at, updated_at
@@ -107,7 +108,7 @@ func CreateClassSession(w http.ResponseWriter, r *http.Request) {
 func GetClassSessionAttendance(w http.ResponseWriter, r *http.Request) {
 	sessionID := chiURLParam(r, "id")
 
-	rows, err := database.DB.Query(`
+	rows, err := database.DB.Query(context.Background(), `
 		SELECT ar.id, ar.class_session_id, ar.student_id, ar.qr_session_id,
 		       ar.device_fingerprint, ar.attended_at,
 		       s.full_name, s.student_id as student_no
