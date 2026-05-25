@@ -30,8 +30,12 @@ document.addEventListener("DOMContentLoaded", function () {
         if (e.target === this) closeAttendanceModal();
     });
 
-    loadCourses();
-    loadSessions();
+    async function loadDashboard() {
+    await loadCourses();   // Wait for courses to finish
+    await loadSessions();  // Then load sessions
+}
+
+    loadDashboard();
 });
 
 var coursesLoading = false;
