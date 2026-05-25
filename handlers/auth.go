@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -39,6 +40,7 @@ func StudentLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
+		log.Printf("StudentLogin query error: %v", err)
 		http.Error(w, `{"error":"server error"}`, http.StatusInternalServerError)
 		return
 	}
@@ -80,6 +82,7 @@ func TeacherLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
+		log.Printf("TeacherLogin query error: %v", err)
 		http.Error(w, `{"error":"server error"}`, http.StatusInternalServerError)
 		return
 	}

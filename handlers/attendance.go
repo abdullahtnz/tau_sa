@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"time"
 
@@ -31,6 +32,7 @@ func SubmitAttendance(w http.ResponseWriter, r *http.Request) {
 	`, req.QRSessionID).Scan(&storedToken, &storedNumericCode, &isActive, &tokenExpiresAt, &numericCodeExpiresAt, &csID)
 
 	if err != nil {
+		log.Printf("SubmitAttendance qr session lookup error: %v", err)
 		http.Error(w, `{"error":"invalid QR session"}`, http.StatusBadRequest)
 		return
 	}
@@ -75,6 +77,7 @@ func SubmitAttendance(w http.ResponseWriter, r *http.Request) {
 		req.ClassSessionID, studentID,
 	).Scan(&alreadyAttended)
 	if err != nil {
+		log.Printf("SubmitAttendance alreadyAttended check error: %v", err)
 		http.Error(w, `{"error":"server error"}`, http.StatusInternalServerError)
 		return
 	}
@@ -89,6 +92,7 @@ func SubmitAttendance(w http.ResponseWriter, r *http.Request) {
 		req.ClassSessionID, req.DeviceFingerprint,
 	).Scan(&deviceUsed)
 	if err != nil {
+		log.Printf("SubmitAttendance deviceUsed check error: %v", err)
 		http.Error(w, `{"error":"server error"}`, http.StatusInternalServerError)
 		return
 	}
@@ -103,6 +107,7 @@ func SubmitAttendance(w http.ResponseWriter, r *http.Request) {
 	`, req.ClassSessionID, studentID, req.QRSessionID, req.DeviceFingerprint)
 
 	if err != nil {
+		log.Printf("SubmitAttendance insert error: %v", err)
 		http.Error(w, `{"error":"failed to record attendance"}`, http.StatusInternalServerError)
 		return
 	}
@@ -124,6 +129,7 @@ func GetStudentAttendance(w http.ResponseWriter, r *http.Request) {
 		ORDER BY cs.session_date DESC, ar.attended_at DESC
 	`, studentID)
 	if err != nil {
+		log.Printf("GetStudentAttendance query error: %v", err)
 		http.Error(w, `{"error":"failed to fetch attendance"}`, http.StatusInternalServerError)
 		return
 	}
@@ -132,11 +138,17 @@ func GetStudentAttendance(w http.ResponseWriter, r *http.Request) {
 	records := []models.AttendanceRecord{}
 	for rows.Next() {
 		var rec models.AttendanceRecord
+		var sessionDate time.Time
 		if err := rows.Scan(&rec.ID, &rec.ClassSessionID, &rec.StudentID, &rec.QRSessionID,
-			&rec.DeviceFingerprint, &rec.AttendedAt, &rec.CourseCode, &rec.CourseName, &rec.SessionDate); err != nil {
+			&rec.DeviceFingerprint, &rec.AttendedAt, &rec.CourseCode, &rec.CourseName, &sessionDate); err != nil {
+			log.Printf("GetStudentAttendance scan error: %v", err)
 			continue
 		}
+		rec.SessionDate = sessionDate.Format("2006-01-02")
 		records = append(records, rec)
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("GetStudentAttendance rows iteration error: %v", err)
 	}
 
 	writeJSON(w, records)

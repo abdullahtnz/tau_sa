@@ -6,8 +6,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math/big"
 	"net/http"
+	"strconv"
 	"time"
 
 	"tau_smart_attendance/database"
@@ -22,7 +24,12 @@ const tokenValiditySeconds = 10
 const numericCodeValiditySeconds = 7
 
 func StartQRSession(w http.ResponseWriter, r *http.Request) {
-	classSessionID := chiURLParam(r, "id")
+	sessionIDStr := chiURLParam(r, "id")
+	classSessionID, err := strconv.Atoi(sessionIDStr)
+	if err != nil {
+		http.Error(w, `{"error":"invalid class session id"}`, http.StatusBadRequest)
+		return
+	}
 
 	token := generateToken()
 	tokenExpires := time.Now().Add(time.Duration(tokenValiditySeconds) * time.Second)
@@ -31,7 +38,7 @@ func StartQRSession(w http.ResponseWriter, r *http.Request) {
 	numericExpires := time.Now().Add(time.Duration(numericCodeValiditySeconds) * time.Second)
 
 	var qrSession models.QRSession
-	err := database.DB.QueryRow(context.Background(), `
+	err = database.DB.QueryRow(context.Background(), `
 		INSERT INTO qr_sessions (class_session_id, is_active, current_token, token_expires_at, numeric_code, numeric_code_expires_at)
 		VALUES ($1, true, $2, $3, $4, $5)
 		RETURNING id, class_session_id, is_active, current_token, token_expires_at, numeric_code, numeric_code_expires_at, created_at
@@ -42,6 +49,7 @@ func StartQRSession(w http.ResponseWriter, r *http.Request) {
 		&qrSession.CreatedAt,
 	)
 	if err != nil {
+		log.Printf("StartQRSession error: %v", err)
 		http.Error(w, `{"error":"failed to start QR session"}`, http.StatusInternalServerError)
 		return
 	}
@@ -50,13 +58,19 @@ func StartQRSession(w http.ResponseWriter, r *http.Request) {
 }
 
 func CloseQRSession(w http.ResponseWriter, r *http.Request) {
-	qrSessionID := chiURLParam(r, "id")
+	sessionIDStr := chiURLParam(r, "id")
+	qrSessionID, err := strconv.Atoi(sessionIDStr)
+	if err != nil {
+		http.Error(w, `{"error":"invalid qr session id"}`, http.StatusBadRequest)
+		return
+	}
 
 	result, err := database.DB.Exec(context.Background(), `
 		UPDATE qr_sessions SET is_active = false, closed_at = NOW()
 		WHERE id = $1 AND is_active = true
 	`, qrSessionID)
 	if err != nil {
+		log.Printf("CloseQRSession error: %v", err)
 		http.Error(w, `{"error":"failed to close QR session"}`, http.StatusInternalServerError)
 		return
 	}
@@ -70,11 +84,16 @@ func CloseQRSession(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetQRToken(w http.ResponseWriter, r *http.Request) {
-	qrSessionID := chiURLParam(r, "id")
+	sessionIDStr := chiURLParam(r, "id")
+	qrSessionID, err := strconv.Atoi(sessionIDStr)
+	if err != nil {
+		http.Error(w, `{"error":"invalid qr session id"}`, http.StatusBadRequest)
+		return
+	}
 
 	var qrSession models.QRSession
 	var closedAt *time.Time
-	err := database.DB.QueryRow(context.Background(), `
+	err = database.DB.QueryRow(context.Background(), `
 		SELECT id, class_session_id, is_active, current_token, token_expires_at, numeric_code, numeric_code_expires_at, closed_at
 		FROM qr_sessions WHERE id = $1
 	`, qrSessionID).Scan(
@@ -88,6 +107,7 @@ func GetQRToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
+		log.Printf("GetQRToken error: %v", err)
 		http.Error(w, `{"error":"server error"}`, http.StatusInternalServerError)
 		return
 	}
@@ -134,6 +154,7 @@ func GetQRToken(w http.ResponseWriter, r *http.Request) {
 		_, err := database.DB.Exec(context.Background(), "UPDATE qr_sessions SET "+updateStmt+" WHERE id = $"+fmt.Sprint(len(updateArgs)+1),
 			append(updateArgs, qrSessionID)...)
 		if err != nil {
+			log.Printf("GetQRToken update error: %v", err)
 			http.Error(w, `{"error":"failed to refresh token"}`, http.StatusInternalServerError)
 			return
 		}
@@ -149,11 +170,16 @@ func GetQRToken(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetQRImage(w http.ResponseWriter, r *http.Request) {
-	qrSessionID := chiURLParam(r, "id")
+	sessionIDStr := chiURLParam(r, "id")
+	qrSessionID, err := strconv.Atoi(sessionIDStr)
+	if err != nil {
+		http.Error(w, "invalid session id", http.StatusNotFound)
+		return
+	}
 
 	var currentToken string
 	var isActive bool
-	err := database.DB.QueryRow(context.Background(),
+	err = database.DB.QueryRow(context.Background(),
 		"SELECT current_token, is_active FROM qr_sessions WHERE id = $1",
 		qrSessionID,
 	).Scan(&currentToken, &isActive)

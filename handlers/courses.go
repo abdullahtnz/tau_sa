@@ -2,7 +2,10 @@ package handlers
 
 import (
 	"context"
+	"log"
 	"net/http"
+	"strconv"
+	"time"
 
 	"tau_smart_attendance/database"
 	"tau_smart_attendance/middleware"
@@ -20,6 +23,7 @@ func GetTeacherCourses(w http.ResponseWriter, r *http.Request) {
 		ORDER BY c.course_code
 	`, teacherID)
 	if err != nil {
+		log.Printf("GetTeacherCourses query error: %v", err)
 		http.Error(w, `{"error":"failed to fetch courses"}`, http.StatusInternalServerError)
 		return
 	}
@@ -29,9 +33,13 @@ func GetTeacherCourses(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var c models.Course
 		if err := rows.Scan(&c.ID, &c.CourseCode, &c.CourseName, &c.Department); err != nil {
+			log.Printf("GetTeacherCourses scan error: %v", err)
 			continue
 		}
 		courses = append(courses, c)
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("GetTeacherCourses rows iteration error: %v", err)
 	}
 
 	writeJSON(w, courses)
@@ -49,6 +57,7 @@ func GetTeacherClassSessions(w http.ResponseWriter, r *http.Request) {
 		ORDER BY cs.session_date DESC, cs.created_at DESC
 	`, teacherID)
 	if err != nil {
+		log.Printf("GetTeacherClassSessions query error: %v", err)
 		http.Error(w, `{"error":"failed to fetch class sessions"}`, http.StatusInternalServerError)
 		return
 	}
@@ -57,10 +66,16 @@ func GetTeacherClassSessions(w http.ResponseWriter, r *http.Request) {
 	sessions := []models.ClassSession{}
 	for rows.Next() {
 		var s models.ClassSession
-		if err := rows.Scan(&s.ID, &s.CourseID, &s.TeacherID, &s.SessionDate, &s.CreatedAt, &s.UpdatedAt, &s.CourseCode, &s.CourseName); err != nil {
+		var sessionDate time.Time
+		if err := rows.Scan(&s.ID, &s.CourseID, &s.TeacherID, &sessionDate, &s.CreatedAt, &s.UpdatedAt, &s.CourseCode, &s.CourseName); err != nil {
+			log.Printf("GetTeacherClassSessions scan error: %v", err)
 			continue
 		}
+		s.SessionDate = sessionDate.Format("2006-01-02")
 		sessions = append(sessions, s)
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("GetTeacherClassSessions rows iteration error: %v", err)
 	}
 
 	writeJSON(w, sessions)
@@ -81,6 +96,7 @@ func CreateClassSession(w http.ResponseWriter, r *http.Request) {
 		req.CourseID, teacherID, req.SessionDate,
 	).Scan(&exists)
 	if err != nil {
+		log.Printf("CreateClassSession exists check error: %v", err)
 		http.Error(w, `{"error":"server error"}`, http.StatusInternalServerError)
 		return
 	}
@@ -90,23 +106,31 @@ func CreateClassSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var session models.ClassSession
+	var sessionDate time.Time
 	err = database.DB.QueryRow(context.Background(), `
 		INSERT INTO class_sessions (course_id, teacher_id, session_date)
 		VALUES ($1, $2, $3)
 		RETURNING id, course_id, teacher_id, session_date, created_at, updated_at
 	`, req.CourseID, teacherID, req.SessionDate).Scan(
-		&session.ID, &session.CourseID, &session.TeacherID, &session.SessionDate, &session.CreatedAt, &session.UpdatedAt,
+		&session.ID, &session.CourseID, &session.TeacherID, &sessionDate, &session.CreatedAt, &session.UpdatedAt,
 	)
 	if err != nil {
+		log.Printf("CreateClassSession insert error: %v", err)
 		http.Error(w, `{"error":"failed to create class session"}`, http.StatusInternalServerError)
 		return
 	}
+	session.SessionDate = sessionDate.Format("2006-01-02")
 
 	writeJSON(w, session)
 }
 
 func GetClassSessionAttendance(w http.ResponseWriter, r *http.Request) {
-	sessionID := chiURLParam(r, "id")
+	sessionIDStr := chiURLParam(r, "id")
+	sessionID, err := strconv.Atoi(sessionIDStr)
+	if err != nil {
+		http.Error(w, `{"error":"invalid session id"}`, http.StatusBadRequest)
+		return
+	}
 
 	rows, err := database.DB.Query(context.Background(), `
 		SELECT ar.id, ar.class_session_id, ar.student_id, ar.qr_session_id,
@@ -118,6 +142,7 @@ func GetClassSessionAttendance(w http.ResponseWriter, r *http.Request) {
 		ORDER BY ar.attended_at ASC
 	`, sessionID)
 	if err != nil {
+		log.Printf("GetClassSessionAttendance query error: %v", err)
 		http.Error(w, `{"error":"failed to fetch attendance"}`, http.StatusInternalServerError)
 		return
 	}
@@ -128,9 +153,13 @@ func GetClassSessionAttendance(w http.ResponseWriter, r *http.Request) {
 		var rec models.AttendanceRecord
 		if err := rows.Scan(&rec.ID, &rec.ClassSessionID, &rec.StudentID, &rec.QRSessionID,
 			&rec.DeviceFingerprint, &rec.AttendedAt, &rec.StudentName, &rec.StudentNo); err != nil {
+			log.Printf("GetClassSessionAttendance scan error: %v", err)
 			continue
 		}
 		records = append(records, rec)
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("GetClassSessionAttendance rows iteration error: %v", err)
 	}
 
 	writeJSON(w, records)
