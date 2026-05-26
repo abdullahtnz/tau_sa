@@ -201,20 +201,32 @@ function startQR(classSessionId, courseCode, courseName, sessionDate) {
 }
 
 function refreshQRImage(qrSessionId) {
+    if (isTokenExpired()) {
+        logout();
+        return;
+    }
+
     var img = document.getElementById("qrcode-img");
-
-    img.onerror = function () {
-        document.getElementById("qrcode-img").style.display = "none";
-    };
-
-    img.onload = function () {
-        document.getElementById("qrcode-img").style.display = "block";
-    };
-
     var url = api("/api/teacher/qr-sessions/" + qrSessionId + "/qr-image") +
         "?t=" + Date.now();
 
-    img.src = url;
+    fetch(url, {
+        headers: { "Authorization": "Bearer " + localStorage.getItem("token") }
+    })
+        .then(function (res) {
+            if (res.status === 401) { logout(); return Promise.reject(); }
+            if (!res.ok) { return Promise.reject(); }
+            return res.blob();
+        })
+        .then(function (blob) {
+            if (img._objectUrl) URL.revokeObjectURL(img._objectUrl);
+            img._objectUrl = URL.createObjectURL(blob);
+            img.src = img._objectUrl;
+            img.style.display = "block";
+        })
+        .catch(function () {
+            document.getElementById("qrcode-img").style.display = "none";
+        });
 }
 
 function refreshNumericCode() {
@@ -275,6 +287,12 @@ function closeQR(qrSessionId) {
     codeTimerInterval = null;
     document.getElementById("qr-modal").style.display = "none";
     currentQRSession = null;
+
+    var img = document.getElementById("qrcode-img");
+    if (img._objectUrl) {
+        URL.revokeObjectURL(img._objectUrl);
+        img._objectUrl = null;
+    }
 
     authFetch(api("/api/teacher/qr-sessions/" + qrSessionId + "/close"), {
         method: "PUT",

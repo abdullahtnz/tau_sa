@@ -27,11 +27,3 @@ THINGS TO DO:
                             "<td>" + new Date(r.attended_at).toLocaleString() + "</td>" +
 
 
-
-
-
-
-
-
-
-
