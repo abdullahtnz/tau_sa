@@ -48,15 +48,12 @@ function login() {
             ? api("/api/login/student")
             : api("/api/login/teacher");
 
-    console.log("Login attempt:", currentRole, userId, "->", endpoint);
-
     fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: userId, password: password }),
     })
         .then(function (res) {
-            console.log("Login response status:", res.status);
             return res.json().then(function (data) {
                 return { ok: res.ok, data: data };
             }, function () {
@@ -64,7 +61,6 @@ function login() {
             });
         })
         .then(function (result) {
-            console.log("Login result:", result);
             if (!result.ok) {
                 var errMsg = (result.data && result.data.error) ? result.data.error : "Login failed.";
                 showError(errMsg);
@@ -76,16 +72,13 @@ function login() {
             localStorage.setItem("full_name", result.data.full_name);
             localStorage.setItem("role", currentRole);
 
-            console.log("Login success, redirecting to dashboard");
-
             if (currentRole === "student") {
                 window.location.href = pathTo("student-dashboard.html");
             } else {
                 window.location.href = pathTo("teacher-dashboard.html");
             }
         })
-        .catch(function (err) {
-            console.error("Login error:", err);
+        .catch(function () {
             showError("Network error. Please try again.");
         });
 }

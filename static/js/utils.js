@@ -27,7 +27,24 @@ function pathTo(filename) {
     return filename;
 }
 
+function isTokenExpired() {
+    var token = localStorage.getItem("token");
+    if (!token) return true;
+    try {
+        var payload = JSON.parse(atob(token.split(".")[1]));
+        var now = Math.floor(Date.now() / 1000);
+        return payload.exp && payload.exp < now;
+    } catch (e) {
+        return true;
+    }
+}
+
 function authFetch(url, options) {
+    if (isTokenExpired()) {
+        logout();
+        return Promise.reject(new Error("token expired"));
+    }
+
     var opts = options || {};
     opts.headers = opts.headers || {};
     opts.headers["Authorization"] = "Bearer " + localStorage.getItem("token");

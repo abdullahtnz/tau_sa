@@ -26,7 +26,7 @@ const numericCodeValiditySeconds = 7
 func StartQRSession(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chiURLParam(r, "id")
 	classSessionID, err := strconv.Atoi(sessionIDStr)
-	if err != nil {
+	if err != nil || classSessionID <= 0 {
 		http.Error(w, `{"error":"invalid class session id"}`, http.StatusBadRequest)
 		return
 	}
@@ -60,7 +60,7 @@ func StartQRSession(w http.ResponseWriter, r *http.Request) {
 func CloseQRSession(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chiURLParam(r, "id")
 	qrSessionID, err := strconv.Atoi(sessionIDStr)
-	if err != nil {
+	if err != nil || qrSessionID <= 0 {
 		http.Error(w, `{"error":"invalid qr session id"}`, http.StatusBadRequest)
 		return
 	}
@@ -86,7 +86,7 @@ func CloseQRSession(w http.ResponseWriter, r *http.Request) {
 func GetQRToken(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chiURLParam(r, "id")
 	qrSessionID, err := strconv.Atoi(sessionIDStr)
-	if err != nil {
+	if err != nil || qrSessionID <= 0 {
 		http.Error(w, `{"error":"invalid qr session id"}`, http.StatusBadRequest)
 		return
 	}
@@ -172,17 +172,18 @@ func GetQRToken(w http.ResponseWriter, r *http.Request) {
 func GetQRImage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chiURLParam(r, "id")
 	qrSessionID, err := strconv.Atoi(sessionIDStr)
-	if err != nil {
+	if err != nil || qrSessionID <= 0 {
 		http.Error(w, "invalid session id", http.StatusNotFound)
 		return
 	}
 
 	var currentToken string
 	var isActive bool
+	var classSessionID int
 	err = database.DB.QueryRow(context.Background(),
-		"SELECT current_token, is_active FROM qr_sessions WHERE id = $1",
+		"SELECT current_token, is_active, class_session_id FROM qr_sessions WHERE id = $1",
 		qrSessionID,
-	).Scan(&currentToken, &isActive)
+	).Scan(&currentToken, &isActive, &classSessionID)
 
 	if err != nil || !isActive {
 		http.Error(w, "session not active", http.StatusNotFound)
@@ -190,18 +191,10 @@ func GetQRImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	payload, _ := json.Marshal(map[string]interface{}{
-		"class_session_id": chiURLParam(r, "class_session_id"),
+		"class_session_id": classSessionID,
 		"qr_session_id":    qrSessionID,
 		"token":            currentToken,
 	})
-
-	if r.URL.Query().Get("class_session_id") != "" {
-		payload, _ = json.Marshal(map[string]interface{}{
-			"class_session_id": r.URL.Query().Get("class_session_id"),
-			"qr_session_id":    qrSessionID,
-			"token":            currentToken,
-		})
-	}
 
 	pngData, err := qrcode.Encode(string(payload), qrcode.Medium, 280)
 	if err != nil {

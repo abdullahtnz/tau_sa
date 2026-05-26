@@ -2,8 +2,12 @@ package handlers
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"tau_smart_attendance/database"
@@ -19,6 +23,13 @@ func SubmitAttendance(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
 		return
 	}
+
+	if req.QRSessionID <= 0 {
+		http.Error(w, `{"error":"invalid qr session id"}`, http.StatusBadRequest)
+		return
+	}
+
+	serverFingerprint := computeDeviceFingerprint(r, studentID)
 
 	var storedToken string
 	var storedNumericCode string
@@ -89,7 +100,7 @@ func SubmitAttendance(w http.ResponseWriter, r *http.Request) {
 	var deviceUsed bool
 	err = database.DB.QueryRow(context.Background(),
 		"SELECT EXISTS(SELECT 1 FROM attendance_records WHERE class_session_id=$1 AND device_fingerprint=$2)",
-		req.ClassSessionID, req.DeviceFingerprint,
+		req.ClassSessionID, serverFingerprint,
 	).Scan(&deviceUsed)
 	if err != nil {
 		log.Printf("SubmitAttendance deviceUsed check error: %v", err)
@@ -104,7 +115,7 @@ func SubmitAttendance(w http.ResponseWriter, r *http.Request) {
 	_, err = database.DB.Exec(context.Background(), `
 		INSERT INTO attendance_records (class_session_id, student_id, qr_session_id, device_fingerprint)
 		VALUES ($1, $2, $3, $4)
-	`, req.ClassSessionID, studentID, req.QRSessionID, req.DeviceFingerprint)
+	`, req.ClassSessionID, studentID, req.QRSessionID, serverFingerprint)
 
 	if err != nil {
 		log.Printf("SubmitAttendance insert error: %v", err)
@@ -113,6 +124,26 @@ func SubmitAttendance(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, map[string]string{"message": "attendance recorded successfully"})
+}
+
+func computeDeviceFingerprint(r *http.Request, studentID int) string {
+	ip := extractAttendanceIP(r)
+	ua := r.Header.Get("User-Agent")
+	hash := sha256.Sum256([]byte(fmt.Sprintf("%s|%s|%d", ip, ua, studentID)))
+	return hex.EncodeToString(hash[:])
+}
+
+func extractAttendanceIP(r *http.Request) string {
+	xff := r.Header.Get("X-Forwarded-For")
+	if xff != "" {
+		ips := strings.Split(xff, ",")
+		return strings.TrimSpace(ips[0])
+	}
+	xri := r.Header.Get("X-Real-IP")
+	if xri != "" {
+		return strings.TrimSpace(xri)
+	}
+	return r.RemoteAddr
 }
 
 func GetStudentAttendance(w http.ResponseWriter, r *http.Request) {

@@ -90,6 +90,15 @@ func CreateClassSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.CourseID <= 0 {
+		http.Error(w, `{"error":"invalid course id"}`, http.StatusBadRequest)
+		return
+	}
+	if req.SessionDate == "" {
+		http.Error(w, `{"error":"session date is required"}`, http.StatusBadRequest)
+		return
+	}
+
 	var exists bool
 	err := database.DB.QueryRow(context.Background(),
 		"SELECT EXISTS(SELECT 1 FROM class_sessions WHERE course_id=$1 AND teacher_id=$2 AND session_date=$3)",
@@ -127,7 +136,7 @@ func CreateClassSession(w http.ResponseWriter, r *http.Request) {
 func GetClassSessionAttendance(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chiURLParam(r, "id")
 	sessionID, err := strconv.Atoi(sessionIDStr)
-	if err != nil {
+	if err != nil || sessionID <= 0 {
 		http.Error(w, `{"error":"invalid session id"}`, http.StatusBadRequest)
 		return
 	}

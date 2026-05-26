@@ -76,6 +76,10 @@ func IPCheck(next http.Handler) http.Handler {
 	})
 }
 
+func ExtractClientIP(r *http.Request) string {
+	return extractClientIP(r)
+}
+
 func extractClientIP(r *http.Request) string {
 	xff := r.Header.Get("X-Forwarded-For")
 	if xff != "" {

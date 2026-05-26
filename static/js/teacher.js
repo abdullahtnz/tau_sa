@@ -70,6 +70,8 @@ function loadCourses() {
 
 var sessionsLoading = false;
 
+var sessionsData = {};
+
 function loadSessions() {
     if (sessionsLoading) return;
     sessionsLoading = true;
@@ -92,6 +94,7 @@ function loadSessions() {
             var html = "";
             for (var i = 0; i < sessions.length; i++) {
                 var s = sessions[i];
+                sessionsData[s.id] = s;
                 html +=
                     '<div class="session-list-item">' +
                     '<div class="session-info">' +
@@ -99,8 +102,8 @@ function loadSessions() {
                     '<div class="session-date">' + escapeHtml(s.session_date) + "</div>" +
                     "</div>" +
                     '<div class="session-actions">' +
-                    '<button class="btn btn-primary btn-sm" onclick="startQR(' + s.id + ",'" + escapeHtml(s.course_code) + "','" + escapeHtml(s.course_name) + "','" + escapeHtml(s.session_date) + "')\">Start QR</button>" +
-                    '<button class="btn btn-secondary btn-sm" onclick="viewAttendance(' + s.id + ",'" + escapeHtml(s.course_code) + " - " + escapeHtml(s.course_name) + " | " + escapeHtml(s.session_date) + "')\">Attendance</button>" +
+                    '<button class="btn btn-primary btn-sm" onclick="startQRById(' + s.id + ')">Start QR</button>' +
+                    '<button class="btn btn-secondary btn-sm" onclick="viewAttendanceById(' + s.id + ')">Attendance</button>' +
                     "</div></div>";
             }
             document.getElementById("sessions-list").innerHTML = html;
@@ -156,6 +159,19 @@ function createClassSession() {
         });
 }
 
+function startQRById(sessionId) {
+    var s = sessionsData[sessionId];
+    if (!s) return;
+    startQR(s.id, s.course_code, s.course_name, s.session_date);
+}
+
+function viewAttendanceById(sessionId) {
+    var s = sessionsData[sessionId];
+    if (!s) return;
+    var title = s.course_code + " - " + s.course_name + " | " + s.session_date;
+    viewAttendance(s.id, title);
+}
+
 function startQR(classSessionId, courseCode, courseName, sessionDate) {
     currentClassSessionId = classSessionId;
 
@@ -165,8 +181,6 @@ function startQR(classSessionId, courseCode, courseName, sessionDate) {
         .then(function (res) { return res.json(); })
         .then(function (qrSession) {
             currentQRSession = qrSession;
-
-            console.log("QR session started:", qrSession);
 
             document.getElementById("qr-course-name").textContent =
                 courseCode + " - " + courseName + " | " + sessionDate;
@@ -181,8 +195,7 @@ function startQR(classSessionId, courseCode, courseName, sessionDate) {
             refreshNumericCode();
             startQRTimers(qrSession.id);
         })
-        .catch(function (err) {
-            console.error("Failed to start QR session:", err);
+        .catch(function () {
             showToast("Failed to start QR session.", "error");
         });
 }
@@ -191,19 +204,16 @@ function refreshQRImage(qrSessionId) {
     var img = document.getElementById("qrcode-img");
 
     img.onerror = function () {
-        console.error("QR image failed to load");
         document.getElementById("qrcode-img").style.display = "none";
     };
 
     img.onload = function () {
-        console.log("QR image loaded successfully");
         document.getElementById("qrcode-img").style.display = "block";
     };
 
     var url = api("/api/teacher/qr-sessions/" + qrSessionId + "/qr-image") +
-        "?class_session_id=" + currentClassSessionId + "&t=" + Date.now();
+        "?t=" + Date.now();
 
-    console.log("Loading QR image:", url);
     img.src = url;
 }
 
@@ -213,8 +223,6 @@ function refreshNumericCode() {
     authFetch(api("/api/teacher/qr-sessions/" + currentQRSession.id + "/token"))
         .then(function (res) { return res.json(); })
         .then(function (data) {
-            console.log("Numeric code refresh:", data);
-
             if (!data.is_active) {
                 document.getElementById("numeric-code-display").textContent = "CLOSED";
                 return;

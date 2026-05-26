@@ -217,8 +217,7 @@ function doSubmitAttendance(body) {
                 document.getElementById("code-error").style.display = "block";
             }
         })
-        .catch(function (err) {
-            console.error("Submit attendance error:", err);
+        .catch(function () {
             showToast("Network error. Please try again.", "error");
         });
 }

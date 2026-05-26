@@ -1,11 +1,8 @@
 // config.js - API configuration
-// Change API_BASE to your backend URL when deploying separately.
-// Leave empty ("") when frontend is served from the same origin as the backend.
+// Leave API_BASE empty ("") when frontend is served from the same origin as the backend.
+// Set to your backend URL when deploying separately (e.g. "https://api.example.com").
 
-var API_BASE = "https://tau-sa.onrender.com";
-
-// Example for separate deployment:
-// var API_BASE = "https://your-backend-server.com";
+var API_BASE = "";
 
 function api(path) {
     return API_BASE + path;
