@@ -31,11 +31,16 @@ function isTokenExpired() {
     var token = localStorage.getItem("token");
     if (!token) return true;
     try {
-        var payload = JSON.parse(atob(token.split(".")[1]));
+        var base64Url = token.split(".")[1];
+        var base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+        var jsonPayload = decodeURIComponent(atob(base64).split("").map(function (c) {
+            return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(""));
+        var payload = JSON.parse(jsonPayload);
         var now = Math.floor(Date.now() / 1000);
         return payload.exp && payload.exp < now;
     } catch (e) {
-        return true;
+        return false;
     }
 }
 
